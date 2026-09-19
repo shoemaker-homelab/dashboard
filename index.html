@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Homelab</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Homelab</h1>
+  <nav>
+    <a href="/" class="active">Home</a>
+    <a href="/pipeline/">Pipeline</a>
+  </nav>
+</header>
+
+<main>
+  <section class="card" id="system-card">
+    <h2>DV6 System</h2>
+    <div class="grid" id="system-stats">
+      <div class="stat"><span class="label">CPU</span><span class="value" id="st-cpu">...</span></div>
+      <div class="stat"><span class="label">RAM</span><span class="value" id="st-ram">...</span></div>
+      <div class="stat"><span class="label">Disk</span><span class="value" id="st-disk">...</span></div>
+      <div class="stat"><span class="label">Temp</span><span class="value" id="st-temp">...</span></div>
+      <div class="stat"><span class="label">Uptime</span><span class="value" id="st-uptime">...</span></div>
+      <div class="stat"><span class="label">Tailscale IP</span><span class="value small" id="st-ip">...</span></div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Services</h2>
+    <ul id="services" class="services">
+      <li id="pb-health">
+        <span class="dot"></span> PocketBase <span class="detail"></span>
+      </li>
+      <li id="pb-leads">
+        <span class="dot"></span> Leads API <span class="detail"></span>
+      </li>
+      <!-- same PB instance as pb-health, but green only when the leads
+           collection actually serves records (data-health, not liveness) -->
+
+      <li data-url="/api/stats">
+        <span class="dot"></span> DV6 Stats <span class="detail"></span>
+      </li>
+      <li data-api="/api/probe?url=https%3A%2F%2Fhermes.tailda8422.ts.net%2F">
+        <span class="dot"></span> Hermes Dashboard <span class="detail"></span>
+      </li>
+      <li data-url="/pipeline/">
+        <span class="dot"></span> Side Hustle Pipeline <span class="detail"></span>
+      </li>
+    </ul>
+  </section>
+
+  <section class="card">
+    <h2>Quick Links</h2>
+    <ul class="links">
+      <li><a href="#" id="pb-admin">PocketBase Admin</a></li>
+      <li><a href="https://hermes.tailda8422.ts.net:8443/">Hermes Agent Dashboard</a></li>
+      <li><a href="/pipeline/">Side Hustle Pipeline</a></li>
+    </ul>
+  </section>
+
+  <section class="card muted">
+    <h2>Future Integrations</h2>
+    <ul class="services">
+      <li><span class="dot grey"></span> NFS monitoring</li>
+      <li><span class="dot grey"></span> k3s</li>
+    </ul>
+  </section>
+</main>
+
+<footer>Homelab Dashboard. Reload the page for fresh numbers.</footer>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
