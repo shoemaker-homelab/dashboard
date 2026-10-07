@@ -5,31 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Jellyfin on CP Proxmox — Guide References</title>
 <style>
-  :root{--ink:#1a1f2e;--sub:#5a6478;--bg:#f6f7fa;--card:#fff;--accent:#7c3aed;--warn-bg:#fff7e6;--warn-bd:#f0b429}
+  :root{--ink:#e6e9f2;--sub:#98a0b3;--bg:#0f1218;--card:#171b24;--accent:#a78bfa;--warn-bg:#2a2416;--warn-bd:#f0b429}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px}
   main{max-width:52rem;margin:0 auto;padding:1.25rem 1rem 3rem}
   h1{font-size:1.5rem;margin:.5rem 0 .25rem}
-  h2{font-size:1.15rem;margin:1.75rem 0 .5rem;border-bottom:2px solid #e3e6ee;padding-bottom:.3rem}
+  h2{font-size:1.15rem;margin:1.75rem 0 .5rem;border-bottom:2px solid #262c3a;padding-bottom:.3rem}
   .sub{color:var(--sub);font-size:.92rem;margin-bottom:1.25rem}
-  .card{background:var(--card);border:1px solid #e3e6ee;border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
+  .card{background:var(--card);border:1px solid #262c3a;border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
   .card h3{margin:0 0 .35rem;font-size:1.02rem}
   .card p{margin:.3rem 0}
   a{color:var(--accent)}
-  .tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;background:#ede9fe;color:var(--accent);border-radius:999px;padding:.1rem .55rem;vertical-align:middle}
+  .tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;background:#2e2650;color:#c4b5fd;border-radius:999px;padding:.1rem .55rem;vertical-align:middle}
   .warn{background:var(--warn-bg);border-left:4px solid var(--warn-bd);border-radius:8px;padding:.75rem .9rem;margin:.9rem 0}
   .warn strong{display:block;margin-bottom:.2rem}
-  code{background:#eceef3;border-radius:4px;padding:.08rem .35rem;font-size:.88em}
+  code{background:#1f2431;border-radius:4px;padding:.08rem .35rem;font-size:.88em}
   ul{margin:.4rem 0;padding-left:1.3rem}
   li{margin:.25rem 0}
   nav.top{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0 1.5rem}
-  nav.top a{text-decoration:none;font-size:.85rem;background:var(--card);border:1px solid #e3e6ee;border-radius:999px;padding:.3rem .8rem}
+  nav.top a{text-decoration:none;font-size:.85rem;background:var(--card);border:1px solid #262c3a;border-radius:999px;padding:.3rem .8rem}
   @media(min-width:48rem){h1{font-size:1.8rem}}
 </style>
 </head>
 <body>
 <main>
-<nav class="top"><a href="../immich/">&#8592; Immich</a><a href="../gpu/">&#8592; GPU</a></nav>
+<nav class="top"><a href="../immich/guide.html">&#8592; Immich</a><a href="../gpu/guide.html">&#8592; GPU</a></nav>
 <h1>Jellyfin on CP Proxmox</h1>
 <p class="sub">Media server &middot; unprivileged LXC &middot; NVENC transcode via shared host GPU &middot; Tailscale Funnel ingress &middot; References gathered 2026-10-05</p>
 
@@ -46,7 +46,7 @@
 
 <div class="card">
   <h3>NVENC transcode setup (inside Jellyfin)</h3>
-  <p>GPU access itself is covered on the <a href="../gpu/">GPU page</a> (nvidia-container-toolkit route, host owns the driver). Inside Jellyfin: Dashboard &rarr; Playback &rarr; Transcoding &rarr; select <strong>NVENC</strong> hardware acceleration. The jellywatch guide covers the container-side verification steps (check <code>/dev/nvidia*</code> nodes are visible, then force a transcode and watch <code>nvidia-smi</code> load): <a href="https://jellywatch.app/blog/jellyfin-proxmox-lxc-vm-setup-gpu-passthrough-2026">jellywatch.app — Jellyfin Proxmox LXC/VM GPU passthrough 2026</a></p>
+  <p>GPU access itself is covered on the <a href="../gpu/guide.html">GPU page</a> (nvidia-container-toolkit route, host owns the driver). Inside Jellyfin: Dashboard &rarr; Playback &rarr; Transcoding &rarr; select <strong>NVENC</strong> hardware acceleration. The jellywatch guide covers the container-side verification steps (check <code>/dev/nvidia*</code> nodes are visible, then force a transcode and watch <code>nvidia-smi</code> load): <a href="https://jellywatch.app/blog/jellyfin-proxmox-lxc-vm-setup-gpu-passthrough-2026">jellywatch.app — Jellyfin Proxmox LXC/VM GPU passthrough 2026</a></p>
   <p>Proxmox forum tutorial (device-node route — useful background on which <code>/dev/nvidia*</code> nodes matter even if you use the toolkit route): <a href="https://forum.proxmox.com/threads/jellyfin-lxc-with-nvidia-gpu-transcoding-and-network-storage.138873">forum.proxmox.com — Jellyfin LXC with Nvidia GPU transcoding</a></p>
 </div>
 

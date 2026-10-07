@@ -5,31 +5,31 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>GPU as a Service (3060 Ti) — Guide References</title>
 <style>
-  :root{--ink:#1a1f2e;--sub:#5a6478;--bg:#f6f7fa;--card:#fff;--accent:#b45309;--warn-bg:#fff7e6;--warn-bd:#f0b429}
+  :root{--ink:#e6e9f2;--sub:#98a0b3;--bg:#0f1218;--card:#171b24;--accent:#fbbf24;--warn-bg:#2a2416;--warn-bd:#f0b429}
   *{box-sizing:border-box}
   body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px}
   main{max-width:52rem;margin:0 auto;padding:1.25rem 1rem 3rem}
   h1{font-size:1.5rem;margin:.5rem 0 .25rem}
-  h2{font-size:1.15rem;margin:1.75rem 0 .5rem;border-bottom:2px solid #e3e6ee;padding-bottom:.3rem}
+  h2{font-size:1.15rem;margin:1.75rem 0 .5rem;border-bottom:2px solid #262c3a;padding-bottom:.3rem}
   .sub{color:var(--sub);font-size:.92rem;margin-bottom:1.25rem}
-  .card{background:var(--card);border:1px solid #e3e6ee;border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
+  .card{background:var(--card);border:1px solid #262c3a;border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
   .card h3{margin:0 0 .35rem;font-size:1.02rem}
   .card p{margin:.3rem 0}
   a{color:var(--accent)}
-  .tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;background:#fef3c7;color:var(--accent);border-radius:999px;padding:.1rem .55rem;vertical-align:middle}
+  .tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;background:#3d2e10;color:#fcd34d;border-radius:999px;padding:.1rem .55rem;vertical-align:middle}
   .warn{background:var(--warn-bg);border-left:4px solid var(--warn-bd);border-radius:8px;padding:.75rem .9rem;margin:.9rem 0}
   .warn strong{display:block;margin-bottom:.2rem}
-  code{background:#eceef3;border-radius:4px;padding:.08rem .35rem;font-size:.88em}
+  code{background:#1f2431;border-radius:4px;padding:.08rem .35rem;font-size:.88em}
   ul{margin:.4rem 0;padding-left:1.3rem}
   li{margin:.25rem 0}
   nav.top{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0 1.5rem}
-  nav.top a{text-decoration:none;font-size:.85rem;background:var(--card);border:1px solid #e3e6ee;border-radius:999px;padding:.3rem .8rem}
+  nav.top a{text-decoration:none;font-size:.85rem;background:var(--card);border:1px solid #262c3a;border-radius:999px;padding:.3rem .8rem}
   @media(min-width:48rem){h1{font-size:1.8rem}}
 </style>
 </head>
 <body>
 <main>
-<nav class="top"><a href="../jellyfin/">&#8592; Jellyfin</a><a href="../immich/">&#8592; Immich</a></nav>
+<nav class="top"><a href="../jellyfin/guide.html">&#8592; Jellyfin</a><a href="../immich/guide.html">&#8592; Immich</a></nav>
 <h1>GPU as a Service — RTX 3060 Ti</h1>
 <p class="sub">One driver install on the Proxmox host; nvidia-container-toolkit injects the GPU into both the Jellyfin LXC and the Immich (Docker) LXC &middot; Route B &middot; References gathered 2026-10-05</p>
 
@@ -37,6 +37,44 @@
   <h3><span class="tag">Chosen route</span> nvidia-container-toolkit</h3>
   <p>The model: the <strong>host</strong> installs the NVIDIA driver once and owns the kernel modules. The toolkit injects the user-space driver libraries and <code>/dev/nvidia*</code> device nodes into containers on demand. No driver-version matching between host and each container, no driver reinstall inside LXCs on host upgrades.</p>
   <p>End-to-end walkthrough (host driver + toolkit + Docker runtime configuration, written for Docker-in-LXC): <a href="https://digitalspaceport.com/proxmox-lxc-docker-gpu-passthrough-setup-guide">digitalspaceport.com — Proxmox LXC Docker GPU passthrough setup guide</a></p>
+  <p><strong>Host driver install on PVE 9.2 / trixie / kernel 7.x (current, June 2026):</strong> <a href="https://geekistheway.com/2026/06/17/fixing-nvidia-driver-compilation-failures-on-proxmox-9-2-debian-trixie-linux-kernel-7-x">geekistheway.com — Installing latest NVIDIA driver on Proxmox 9.2</a>. Prefer this over older guides — it covers the kernel-7.x specifics below.</p>
+</div>
+
+<div class="card">
+  <h3>Host install corrections learned 2026-10-07 (on cyberpower)</h3>
+  <ul>
+    <li>Older guides say <code>pve-headers</code> — renamed to <code>proxmox-headers</code> in PVE 9. Use <code>proxmox-headers-$(uname -r)</code>. Also install <code>dkms</code> explicitly.</li>
+    <li>Debian 13 (trixie) <strong>removed <code>software-properties-common</code></strong> entirely — no <code>add-apt-repository</code> either. Any guide step using them must be replaced with a direct <code>/etc/apt/sources.list.d/*.sources</code> edit.</li>
+    <li><code>update-initramfs</code> is a command, not a package — run it as its own step after the install.</li>
+    <li>If <code>apt upgrade</code> pulls a new kernel: reboot BEFORE installing the NVIDIA driver, so DKMS compiles against the kernel that will actually boot.</li>
+  </ul>
+
+<div class="card">
+  <h3>Secure Boot signing + MOK enrollment (done 2026-10-07)</h3>
+  <p>cyberpower boots with Secure Boot ENABLED (consumer board, default keys). The .run installer generated a signing key pair in <code>/usr/share/nvidia/</code> (nvidia-modsign-key-C0EB95B1.key / nvidia-modsign-crt-C0EB95B1.der) and signed all five modules. DKMS signing was wired manually in <code>/etc/dkms/framework.conf</code>: <code>sign_file=/usr/src/linux-headers-${kernelver}/scripts/sign-file</code> + <code>mok_signing_key</code> / <code>mok_certificate</code> pointing at that pair (verified end-to-end with <code>dkms build/install --force</code> then <code>modinfo | grep signer</code>).</p>
+  <p>Enrollment flow: <code>mokutil --import &lt;crt.der&gt;</code> (one-time password) &rarr; reboot &rarr; blue MOK screen &rarr; <strong>Enroll MOK</strong> (NOT "Enroll key from disk") &rarr; select the pending key (shown as its EFI device path, e.g. PciRoot...) &rarr; Yes &rarr; password &rarr; reboot. Two failure modes learned: (1) the machine is 500+ miles away, enrollment needs ANYONE at the console for 5 minutes, guided by phone; (2) navigating into the disk file browser (memtest/grub/vmlinuz listing) is the wrong path &mdash; back out to the main menu and use Enroll MOK. A password typo silently fails enrollment (module loads with "Loading of module with unavailable key is rejected" in dmesg). Verified: <code>mokutil --test-key</code> says enrolled, <code>nvidia-smi</code> green.</p>
+  <p><strong>Key details (installer output, for the record):</strong> cert <code>/usr/share/nvidia/nvidia-modsign-crt-C0EB95B1.der</code>, SHA1 fingerprint <code>C0:EB:95:B1:A0:E4:E4:2A:62:6E:0D:CF:21:3F:EF:C5:AD:92:A5:EE</code>; private key <code>/usr/share/nvidia/nvidia-modsign-key-C0EB95B1.key</code>. Once enrolled, the same pair signs all future module rebuilds with no re-enrollment needed. Precautions on the private key: it's root-readable in <code>/usr/share/nvidia/</code>; don't loosen permissions on it, and if the box is ever decommissioned, remove the key files.</p>
+  <p><strong>Device nodes after a clean boot (accept criteria):</strong></p>
+  <ul>
+    <li><code>crw-rw-rw- root 195,0   /dev/nvidia0</code></li>
+    <li><code>crw-rw-rw- root 195,255 /dev/nvidiactl</code></li>
+    <li><code>crw-rw-rw- root 511,0   /dev/nvidia-uvm</code></li>
+    <li><code>crw-rw-rw- root 511,1   /dev/nvidia-uvm-tools</code></li>
+  </ul>
+  <p>If these are missing after boot, run <code>nvidia-modprobe -c0 -u</code> (and wire it as the LXC pre-start hook later &mdash; the containers depend on these nodes existing).</p>
+</div>
+
+<div class="card">
+  <h3>Installing nvidia-container-toolkit (the missing download step)</h3>
+  <p>None of the walkthroughs above cover the install itself. Official NVIDIA procedure (docs.nvidia.com/datacenter/cloud-native/container-toolkit/latest/install-guide.html). <strong>On the host</strong>:</p>
+  <ul>
+    <li><code>curl -fsSL https://nvidia.github.io/libnvidia-container/gpgkey | gpg --dearmor -o /usr/share/keyrings/nvidia-container-toolkit-keyring.gpg</code></li>
+    <li><code>curl -s -L https://nvidia.github.io/libnvidia-container/stable/deb/nvidia-container-toolkit.list | sed 's#deb https://#deb [signed-by=/usr/share/keyrings/nvidia-container-toolkit-keyring.gpg] https://#g' &gt; /etc/apt/sources.list.d/nvidia-container-toolkit.list</code></li>
+    <li><code>apt update &amp;&amp; apt install -y nvidia-container-toolkit</code></li>
+    <li>Verify: <code>nvidia-ctk --version</code></li>
+  </ul>
+  <p><strong>Inside the Immich (Docker) LXC</strong>, repeat the repo + install, then <code>nvidia-ctk runtime configure --runtime=docker</code> and <code>systemctl restart docker</code>. No daemon exists for this toolkit &mdash; it's tools + the LXC/Docker hook glue. (For the raw Jellyfin LXC, no Docker runtime config is needed; the LXC hook lines in the next card do the injection.)</p>
+  <p>Known NVIDIA issue worth knowing: with systemd cgroup drivers, containers can lose GPU access after <code>systemctl daemon-reload</code> (troubleshooting doc on the NVIDIA site).</p>
 </div>
 
 <div class="card">
