@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Guides · Homelab</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Homelab</h1>
+  <nav>
+    <a href="/">Home</a>
+    <a href="/pipeline/">Pipeline</a>
+    <a href="/guides.html" class="active">Guides</a>
+  </nav>
+</header>
+
+<main>
+  <section class="card" id="guides-root">
+    <h2>Guides</h2>
+    <p class="detail">Reference guides, grouped by host/topic. Structured from
+      <code>guides.json</code> so guides can be nested or un-nested without touching the page.</p>
+    <div id="guides-loading" class="detail">Loading…</div>
+  </section>
+</main>
+
+<script>
+(async () => {
+  const root = document.getElementById('guides-root');
+  try {
+    const res = await fetch('/guides.json', { cache: 'no-store' });
+    if (!res.ok) throw new Error('guides.json HTTP ' + res.status);
+    const data = await res.json();
+    document.getElementById('guides-loading').remove();
+
+    for (const group of data.groups) {
+      const sec = document.createElement('section');
+      sec.className = 'card guide-group';
+      sec.dataset.group = group.id;
+      const h = document.createElement('h2');
+      h.textContent = group.title;
+      sec.appendChild(h);
+      const grid = document.createElement('div');
+      grid.className = 'guide-grid';
+      for (const g of group.guides) {
+        const a = document.createElement('a');
+        a.className = 'guide-card';
+        a.href = '/guides/' + g.path;
+        const t = document.createElement('span');
+        t.className = 'guide-card-title';
+        t.textContent = g.title;
+        const s = document.createElement('span');
+        s.className = 'guide-card-summary';
+        s.textContent = g.summary || '';
+        a.appendChild(t);
+        a.appendChild(s);
+        grid.appendChild(a);
+      }
+      sec.appendChild(grid);
+      root.insertAdjacentElement('afterend', sec);
+    }
+  } catch (e) {
+    document.getElementById('guides-loading').textContent = 'Failed to load guides: ' + e.message;
+  }
+})();
+</script>
+</body>
+</html>

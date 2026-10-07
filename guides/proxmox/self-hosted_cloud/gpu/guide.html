@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GPU as a Service (3060 Ti) — Guide References</title>
+<style>
+  :root{--ink:#1a1f2e;--sub:#5a6478;--bg:#f6f7fa;--card:#fff;--accent:#b45309;--warn-bg:#fff7e6;--warn-bd:#f0b429}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px}
+  main{max-width:52rem;margin:0 auto;padding:1.25rem 1rem 3rem}
+  h1{font-size:1.5rem;margin:.5rem 0 .25rem}
+  h2{font-size:1.15rem;margin:1.75rem 0 .5rem;border-bottom:2px solid #e3e6ee;padding-bottom:.3rem}
+  .sub{color:var(--sub);font-size:.92rem;margin-bottom:1.25rem}
+  .card{background:var(--card);border:1px solid #e3e6ee;border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
+  .card h3{margin:0 0 .35rem;font-size:1.02rem}
+  .card p{margin:.3rem 0}
+  a{color:var(--accent)}
+  .tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;background:#fef3c7;color:var(--accent);border-radius:999px;padding:.1rem .55rem;vertical-align:middle}
+  .warn{background:var(--warn-bg);border-left:4px solid var(--warn-bd);border-radius:8px;padding:.75rem .9rem;margin:.9rem 0}
+  .warn strong{display:block;margin-bottom:.2rem}
+  code{background:#eceef3;border-radius:4px;padding:.08rem .35rem;font-size:.88em}
+  ul{margin:.4rem 0;padding-left:1.3rem}
+  li{margin:.25rem 0}
+  nav.top{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0 1.5rem}
+  nav.top a{text-decoration:none;font-size:.85rem;background:var(--card);border:1px solid #e3e6ee;border-radius:999px;padding:.3rem .8rem}
+  @media(min-width:48rem){h1{font-size:1.8rem}}
+</style>
+</head>
+<body>
+<main>
+<nav class="top"><a href="../jellyfin/">&#8592; Jellyfin</a><a href="../immich/">&#8592; Immich</a></nav>
+<h1>GPU as a Service — RTX 3060 Ti</h1>
+<p class="sub">One driver install on the Proxmox host; nvidia-container-toolkit injects the GPU into both the Jellyfin LXC and the Immich (Docker) LXC &middot; Route B &middot; References gathered 2026-10-05</p>
+
+<div class="card">
+  <h3><span class="tag">Chosen route</span> nvidia-container-toolkit</h3>
+  <p>The model: the <strong>host</strong> installs the NVIDIA driver once and owns the kernel modules. The toolkit injects the user-space driver libraries and <code>/dev/nvidia*</code> device nodes into containers on demand. No driver-version matching between host and each container, no driver reinstall inside LXCs on host upgrades.</p>
+  <p>End-to-end walkthrough (host driver + toolkit + Docker runtime configuration, written for Docker-in-LXC): <a href="https://digitalspaceport.com/proxmox-lxc-docker-gpu-passthrough-setup-guide">digitalspaceport.com — Proxmox LXC Docker GPU passthrough setup guide</a></p>
+</div>
+
+<div class="card">
+  <h3>Wiring the toolkit into an LXC (not just Docker)</h3>
+  <p>The toolkit's LXC hook mounts the driver + binaries into the container at start. Key lines for <code>/etc/pve/lxc/&lt;vmid&gt;.conf</code> plus the PVE 9-specific fixes and debugging: <a href="https://forum.proxmox.com/threads/pve-9-nvidia-container-toolkit-broken.169364">forum.proxmox.com — PVE 9 nvidia-container-toolkit thread</a></p>
+  <p>Typical shape (verify against the thread):</p>
+  <ul>
+    <li><code>lxc.hook.mount: /usr/share/lxc/hooks/nvidia</code></li>
+    <li><code>lxc.environment: NVIDIA_VISIBLE_DEVICES=all</code></li>
+    <li><code>lxc.environment: NVIDIA_DRIVER_CAPABILITIES=all</code> (Jellyfin needs <code>video</code>; Immich ML needs <code>compute</code>)</li>
+    <li>Pre-start hook running <code>nvidia-modprobe</code> so the device nodes exist before the container mounts them</li>
+  </ul>
+  <p>For Docker inside the Immich LXC: <code>nvidia-ctk runtime configure --runtime=docker</code> on the container side, then <code>runtime: nvidia</code> on services that need the GPU.</p>
+</div>
+
+<div class="card">
+  <h3>Alternative route (documented for reference)</h3>
+  <p>Device-node passthrough: pass <code>/dev/nvidia0</code>, <code>nvidiactl</code>, <code>nvidia-uvm</code>, and caps nodes into the LXC and install a matching user-space driver inside it. More commonly documented, but every host driver upgrade must be mirrored inside each container. Forum tutorial: <a href="https://forum.proxmox.com/threads/jellyfin-lxc-with-nvidia-gpu-transcoding-and-network-storage.138873">Jellyfin LXC with Nvidia GPU transcoding</a>. Chose the toolkit route instead because it serves both services from one driver install.</p>
+</div>
+
+<h2>Gotchas and notes</h2>
+<div class="warn"><strong>PVE 9.x persistence quirk</strong> Known failure mode (flagged in the project risk doc): after a host reboot, containers can fail to see the GPU until device nodes are re-created. The <code>nvidia-modprobe</code> pre-start hook in the forum thread is the fix. Test a full reboot after wiring this up — the accept-criteria is a clean <code>nvidia-smi</code> inside both LXCs post-reboot.</div>
+<div class="warn"><strong>Verify driver visibility, not just devices</strong> A container can see <code>/dev/nvidia*</code> nodes and still fail if the user-space library version doesn't match the host kernel module version. With the toolkit route the hook handles matching; the failure symptom to recognize is <code>nvidia-smi</code> erroring inside the container while working on the host.</div>
+<div class="warn"><strong>NVENC session cap</strong> ~3&ndash;5 concurrent NVENC sessions at the driver level. <a href="https://github.com/keylase/nvidia-patch">keylase/nvidia-patch</a> lifts it if family-scale transcoding ever saturates.</div>
+<div class="warn"><strong>Unprivileged containers only</strong> Never combine this with a privileged LXC. Privileged + GPU passthrough gives container root effective host access.</div>
+<div class="warn"><strong>One GPU, two consumers</strong> Jellyfin transcodes and Immich ML share the card. That's fine (driver multiplexes), but a heavy ML re-scan while someone streams 4K can cause transcode stutter. Consider scheduling Immich ML scans off-peak if both ever collide.</div>
+</main>
+</body>
+</html>

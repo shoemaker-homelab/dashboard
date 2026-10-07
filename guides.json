@@ -1,0 +1,29 @@
+{
+  "version": 1,
+  "groups": [
+    {
+      "id": "proxmox/self-hosted_cloud",
+      "title": "Proxmox · Self-Hosted Cloud",
+      "guides": [
+        {
+          "slug": "jellyfin",
+          "title": "Jellyfin on CP Proxmox",
+          "summary": "Media server reference guide and setup notes.",
+          "path": "proxmox/self-hosted_cloud/jellyfin/guide.html"
+        },
+        {
+          "slug": "immich",
+          "title": "Immich on CP Proxmox",
+          "summary": "Self-hosted photo library reference guide and setup notes.",
+          "path": "proxmox/self-hosted_cloud/immich/guide.html"
+        },
+        {
+          "slug": "gpu",
+          "title": "GPU as a Service (3060 Ti)",
+          "summary": "Sharing the Cyberpower 3060 Ti across Proxmox workloads.",
+          "path": "proxmox/self-hosted_cloud/gpu/guide.html"
+        }
+      ]
+    }
+  ]
+}

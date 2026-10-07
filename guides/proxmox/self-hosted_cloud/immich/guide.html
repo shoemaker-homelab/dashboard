@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Immich on CP Proxmox — Guide References</title>
+<style>
+  :root{--ink:#1a1f2e;--sub:#5a6478;--bg:#f6f7fa;--card:#fff;--accent:#0d9488;--warn-bg:#fff7e6;--warn-bd:#f0b429}
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);line-height:1.55;font-size:16px}
+  main{max-width:52rem;margin:0 auto;padding:1.25rem 1rem 3rem}
+  h1{font-size:1.5rem;margin:.5rem 0 .25rem}
+  h2{font-size:1.15rem;margin:1.75rem 0 .5rem;border-bottom:2px solid #e3e6ee;padding-bottom:.3rem}
+  .sub{color:var(--sub);font-size:.92rem;margin-bottom:1.25rem}
+  .card{background:var(--card);border:1px solid #e3e6ee;border-radius:10px;padding:1rem 1.1rem;margin:.75rem 0}
+  .card h3{margin:0 0 .35rem;font-size:1.02rem}
+  .card p{margin:.3rem 0}
+  a{color:var(--accent)}
+  .tag{display:inline-block;font-size:.72rem;font-weight:600;letter-spacing:.03em;text-transform:uppercase;background:#ccfbf1;color:var(--accent);border-radius:999px;padding:.1rem .55rem;vertical-align:middle}
+  .warn{background:var(--warn-bg);border-left:4px solid var(--warn-bd);border-radius:8px;padding:.75rem .9rem;margin:.9rem 0}
+  .warn strong{display:block;margin-bottom:.2rem}
+  code{background:#eceef3;border-radius:4px;padding:.08rem .35rem;font-size:.88em}
+  ul{margin:.4rem 0;padding-left:1.3rem}
+  li{margin:.25rem 0}
+  nav.top{display:flex;gap:.5rem;flex-wrap:wrap;margin:.75rem 0 1.5rem}
+  nav.top a{text-decoration:none;font-size:.85rem;background:var(--card);border:1px solid #e3e6ee;border-radius:999px;padding:.3rem .8rem}
+  @media(min-width:48rem){h1{font-size:1.8rem}}
+</style>
+</head>
+<body>
+<main>
+<nav class="top"><a href="../jellyfin/">&#8592; Jellyfin</a><a href="../gpu/">&#8592; GPU</a></nav>
+<h1>Immich on CP Proxmox</h1>
+<p class="sub">Photo backup &middot; Docker Compose inside an unprivileged LXC &middot; storage on 2TB HDD &middot; ML capped initially &middot; References gathered 2026-10-05</p>
+
+<div class="card">
+  <h3><span class="tag">Primary</span> Official install — Docker Compose</h3>
+  <p><a href="https://immich.app/docs/install/docker-compose">docs.immich.app/docs/install/docker-compose</a></p>
+  <p>The authoritative procedure. Create <code>immich-app/</code>, download <code>docker-compose.yml</code> + <code>.env</code>, set <code>UPLOAD_LOCATION</code> (bind-mounted 2TB HDD path), set a random <code>DB_PASSWORD</code> (A-Za-z0-9 only), pin <code>IMMICH_VERSION</code>, then <code>docker compose up -d</code>. Use <code>docker compose</code>, not <code>docker-compose</code>.</p>
+</div>
+
+<div class="card">
+  <h3>Docker-in-LXC base container</h3>
+  <p>Immich's own community install pattern: create a Docker-enabled unprivileged LXC (community helper scripts have a one-line "Docker LXC" installer — search "Docker" on <a href="https://community-scripts.org">community-scripts.org</a>), then follow the official compose guide inside it. The original community walkthrough with bind-mount and UID/GID permission details: <a href="https://github.com/tteck/Proxmox/discussions/1668">github.com/tteck/Proxmox discussion #1668</a></p>
+  <p>Container requirements: <code>nesting=1</code> (and typically <code>keyctl=1</code>) on the LXC. Must be <strong>unprivileged</strong> — privileged LXC + Docker = host-root risk.</p>
+</div>
+
+<div class="card">
+  <h3>Resource sizing + LXC gotchas</h3>
+  <p><a href="https://ricardogil.com/blog/immich-proxmox-lxc-2026">ricardogil.com — Immich on Proxmox LXC 2026</a></p>
+  <ul>
+    <li>Minimum 6 GB RAM / 2 vCPU; recommended 8&ndash;16 GB / 4 vCPU for the initial library scan.</li>
+    <li>x86-64-v2 CPU requirement (v3.0+) — Zen3 is fine.</li>
+    <li>Reverse proxy note: large uploads need a big body-size limit on any proxy in front (relevant to the CF Tunnel fallback).</li>
+  </ul>
+</div>
+
+<div class="card">
+  <h3>GPU for ML</h3>
+  <p>Immich's machine learning (face recognition, CLIP search) can run on the shared 3060 Ti via the <a href="../gpu/">nvidia-container-toolkit route</a> — same host driver, no per-container driver install. If RAM pressure is a problem, the ML container can be pointed at the GPU or temporarily disabled in the compose file. Decision (2026-10-04): ML capped or disabled initially; revisit after the first library scan.</p>
+</div>
+
+<div class="card">
+  <h3>Ingress</h3>
+  <p>Tailscale Funnel, same as Jellyfin: <code>https://immich.tailda8422.ts.net</code>. Official docs: <a href="https://tailscale.com/kb/1223/funnel">tailscale.com/kb/1223/funnel</a>. Fallback: Cloudflare Tunnel (free, unlimited subdomains) if Funnel limits bite.</p>
+</div>
+
+<h2>Gotchas and notes</h2>
+<div class="warn"><strong>Version pinning</strong> Pin <code>IMMICH_VERSION</code> in <code>.env</code> and read the release notes before every upgrade — Immich does breaking DB migrations. Back up before upgrading (restic plan covers this).</div>
+<div class="warn"><strong>Sharing model — decide before inviting relatives</strong> Open question: shared albums vs one shared-pool account for family photos. Per-user libraries + dedup was the requirement that chose Immich (both spouses upload the same photo &rarr; one copy, both access). Resolve the model before step 4 (user accounts).</div>
+<div class="warn"><strong>Upload location</strong> <code>UPLOAD_LOCATION</code> must point at the bind-mounted 2TB HDD, not container-local disk — the 500G NVMe is OS/VM disk and will fill.</div>
+<div class="warn"><strong>Phone auto-upload</strong> Test with your phone before family rollout (step 6 of the project plan).</div>
+</main>
+</body>
+</html>
